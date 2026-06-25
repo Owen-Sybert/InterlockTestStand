@@ -1,0 +1,16 @@
+name: teststandgui
+
+channels:
+  - conda-forge
+
+dependencies:
+  - python=3.11
+  - pyqt=6
+  - numpy
+  - matplotlib
+  - pip
+  - pip:
+      - protobuf
+      - grpcio
+      - grpcio-tools
+      - opencv-python
