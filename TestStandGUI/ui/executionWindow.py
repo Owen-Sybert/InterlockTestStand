@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional
 from PyQt6.QtCore import QPointF, QRectF, Qt, QTimer
 from PyQt6.QtGui import QColor, QFont, QPainter, QPen, QPixmap
 from PyQt6.QtWidgets import (
+    QApplication,
     QFileDialog,
     QFrame,
     QGridLayout,
@@ -502,7 +503,7 @@ class ExecutionWindow(QWidget):
         self.logConsoles: List[QPlainTextEdit] = []
 
         self.setWindowTitle("TestStand Execution Dashboard")
-        self.setFixedSize(1024, 600)
+        self._configure_window_geometry()
         self.setStyleSheet(DARK_STYLE)
 
         self.simulator: TelemetrySimulator | None = None
@@ -541,6 +542,36 @@ class ExecutionWindow(QWidget):
         self._show_page(0)
         self.raise_()
         self.activateWindow()
+
+
+    def _configure_window_geometry(self) -> None:
+        """Size the dashboard for the target HMI display.
+
+        On the Raspberry Pi 7-inch HMI, run fullscreen so the operator sees a
+        dedicated appliance-style interface rather than a small desktop window.
+        On development machines, fall back to the designed 1024x600 window if a
+        smaller or unusual screen is detected.
+        """
+        screen = QApplication.primaryScreen()
+
+        if screen is None:
+            self.setFixedSize(1024, 600)
+            return
+
+        available = screen.availableGeometry()
+        width = available.width()
+        height = available.height()
+
+        # Target display is 1024x600. If the current display is at least that
+        # size, use true fullscreen. This also works if the Pi reports a larger
+        # monitor during development.
+        if width >= 1024 and height >= 600:
+            self.setMinimumSize(1024, 600)
+            self.showFullScreen()
+        else:
+            # Development fallback.
+            self.setFixedSize(1024, 600)
+
 
     def _build_ui(self) -> None:
         root = QHBoxLayout(self)
