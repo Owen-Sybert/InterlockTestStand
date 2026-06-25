@@ -43,12 +43,8 @@ if ! command -v conda >/dev/null 2>&1; then
         echo "Miniforge already exists at $MINIFORGE_DIR"
     fi
 
-    # Make conda available in this script immediately.
     eval "$("$MINIFORGE_DIR/bin/conda" shell.bash hook)"
-
-    # Initialize conda for future shells.
     "$MINIFORGE_DIR/bin/conda" init bash
-
     echo "Conda installed. It will be available automatically after opening a new terminal."
 else
     echo "Conda already installed."

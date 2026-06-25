@@ -5,11 +5,11 @@ channels:
 
 dependencies:
   - python=3.11
-  - pyqt=6
   - numpy
   - matplotlib
   - pip
   - pip:
+      - PyQt6
       - protobuf
       - grpcio
       - grpcio-tools
