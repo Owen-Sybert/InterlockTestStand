@@ -7,12 +7,16 @@ echo "======================================"
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_NAME="teststandgui"
+MINIFORGE_DIR="$HOME/miniforge3"
+MINIFORGE_INSTALLER="/tmp/Miniforge3-Linux-aarch64.sh"
+MINIFORGE_URL="https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-aarch64.sh"
 
 echo ""
-echo "[1/6] Installing Raspberry Pi system packages..."
+echo "[1/7] Installing Raspberry Pi system packages..."
 sudo apt update
 sudo apt install -y \
     git \
+    wget \
     build-essential \
     cmake \
     make \
@@ -25,21 +29,38 @@ sudo apt install -y \
     libxkbcommon-x11-0
 
 echo ""
-echo "[2/6] Adding user to dialout group for Teknic USB serial access..."
+echo "[2/7] Adding user to dialout group for Teknic USB serial access..."
 sudo usermod -aG dialout "$USER"
 
 echo ""
-echo "[3/6] Creating/updating conda environment..."
+echo "[3/7] Checking Conda / Miniforge..."
 if ! command -v conda >/dev/null 2>&1; then
-    echo "ERROR: conda was not found."
-    echo "Install Miniconda/Miniforge first, then re-run ./setup.sh"
-    exit 1
+    if [ ! -x "$MINIFORGE_DIR/bin/conda" ]; then
+        echo "Conda not found. Installing Miniforge for Raspberry Pi ARM64..."
+        wget -O "$MINIFORGE_INSTALLER" "$MINIFORGE_URL"
+        bash "$MINIFORGE_INSTALLER" -b -p "$MINIFORGE_DIR"
+    else
+        echo "Miniforge already exists at $MINIFORGE_DIR"
+    fi
+
+    # Make conda available in this script immediately.
+    eval "$("$MINIFORGE_DIR/bin/conda" shell.bash hook)"
+
+    # Initialize conda for future shells.
+    "$MINIFORGE_DIR/bin/conda" init bash
+
+    echo "Conda installed. It will be available automatically after opening a new terminal."
+else
+    echo "Conda already installed."
+    eval "$(conda shell.bash hook)"
 fi
 
+echo ""
+echo "[4/7] Creating/updating conda environment..."
 conda env update --file "$PROJECT_ROOT/environment.yml" --prune
 
 echo ""
-echo "[4/6] Looking for Teknic sFoundation..."
+echo "[5/7] Looking for Teknic sFoundation..."
 TEKNIC_DIR=""
 
 if [ -d "$PROJECT_ROOT/Linux_Software/sFoundation" ]; then
@@ -63,7 +84,7 @@ else
     export TEKNIC_SDK_DIR="$TEKNIC_DIR"
 
     echo ""
-    echo "[5/6] Building/installing Teknic sFoundation..."
+    echo "[6/7] Building/installing Teknic sFoundation..."
     cd "$TEKNIC_DIR"
     make || {
         echo "ERROR: Teknic sFoundation make failed."
@@ -89,16 +110,18 @@ else
 fi
 
 echo ""
-echo "[6/6] Verifying install..."
+echo "[7/7] Verifying install..."
 echo -n "cmake: "; cmake --version | head -n 1
 echo -n "g++: "; g++ --version | head -n 1
 echo -n "make: "; make --version | head -n 1
+echo -n "conda: "; conda --version
 
 echo ""
 echo "Testing Python environment packages..."
 conda run -n "$ENV_NAME" python - <<'PY'
 import sys
 print("Python:", sys.version.split()[0])
+
 try:
     import PyQt6
     print("PyQt6: OK")
@@ -110,6 +133,12 @@ try:
     print("protobuf: OK")
 except Exception as exc:
     raise SystemExit(f"protobuf failed: {exc}")
+
+try:
+    import grpc
+    print("grpcio: OK")
+except Exception as exc:
+    raise SystemExit(f"grpcio failed: {exc}")
 PY
 
 echo ""
